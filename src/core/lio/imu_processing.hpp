@@ -148,9 +148,12 @@ inline void ImuProcess::IMUInit(const MeasureGroup &meas, ESKF &kf_state, int &N
     init_state.timestamp_ = meas.imu_.back()->timestamp;
     init_state.grav_ = S2(-mean_acc_ / mean_acc_.norm() * G_m_s2);
     init_state.bg_ = mean_gyr_;
+    // init_state.ba_ = mean_acc_;
     init_state.offset_t_lidar_ = t_lidar_mu_;
     init_state.offset_R_lidar_ = R_lidar_imu_;
     kf_state.ChangeX(init_state);
+
+    LOG(INFO) << "mean acc: " << mean_acc_.transpose();
 
     auto init_P = kf_state.GetP();
     init_P.setIdentity();
@@ -315,7 +318,8 @@ inline void ImuProcess::Process(const MeasureGroup &meas, ESKF &kf_state, CloudP
 
             cov_acc_ = cov_acc_scale_;
             cov_gyr_ = cov_gyr_scale_;
-            LOG(INFO) << "imu init done, bg: " << imu_state.bg_.transpose() << ", ba: " << imu_state.ba_.transpose();
+            LOG(INFO) << "imu init done, bg: " << imu_state.bg_.transpose() << ", ba: " << imu_state.ba_.transpose()
+                      << ", grav: " << imu_state.grav_.vec_.transpose();
         } else {
             LOG(INFO) << "waiting for imu init ... " << init_iter_num_;
         }

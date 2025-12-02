@@ -132,7 +132,7 @@ void PointCloudPreprocess::VelodyneHandler(const sensor_msgs::msg::PointCloud2::
     std::vector<float> time_last(num_scans_, 0.0);  // last offset time
     /*****************************************************************/
 
-    if (pl_orig.points[plsize - 1].time > 0) {
+    if (pl_orig.points[plsize - 1].timestamp > 0) {
         given_offset_time_ = true;
     } else {
         given_offset_time_ = false;
@@ -147,6 +147,7 @@ void PointCloudPreprocess::VelodyneHandler(const sensor_msgs::msg::PointCloud2::
         }
     }
 
+    double start_time = pl_orig[0].timestamp * time_scale_;
     for (int i = 0; i < plsize; i++) {
         PointType added_pt;
 
@@ -154,7 +155,7 @@ void PointCloudPreprocess::VelodyneHandler(const sensor_msgs::msg::PointCloud2::
         added_pt.y = pl_orig.points[i].y;
         added_pt.z = pl_orig.points[i].z;
         added_pt.intensity = pl_orig.points[i].intensity;
-        added_pt.time = pl_orig.points[i].time * time_scale_;  // curvature unit: ms
+        added_pt.time = pl_orig.points[i].timestamp * time_scale_ - start_time;  // curvature unit: ms
 
         if (!given_offset_time_) {
             int layer = pl_orig.points[i].ring;
