@@ -29,6 +29,7 @@ bool LocSystem::Init(const std::string &yaml_path) {
 
     /// subscribers
     node_ = std::make_shared<rclcpp::Node>("lightning_slam");
+    loc_->SetNode(node_);
 
     imu_topic_ = yaml.GetValue<std::string>("common", "imu_topic");
     cloud_topic_ = yaml.GetValue<std::string>("common", "lidar_topic");

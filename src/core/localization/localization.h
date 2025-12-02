@@ -44,6 +44,8 @@ class Localization {
     Localization(Options options = Options());
     ~Localization() = default;
 
+    void SetNode(rclcpp::Node::SharedPtr node);
+
     /**
      * 初始化，读配置参数
      * @param yaml_path
@@ -126,6 +128,9 @@ class Localization {
     double last_imu_time_ = 0;
     double last_odom_time_ = 0;
     double last_cloud_time_ = 0;
+
+    rclcpp::Node::SharedPtr node_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr local_lidar_pub_;
 };
 }  // namespace loc
 

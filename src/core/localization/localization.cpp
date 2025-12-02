@@ -1,6 +1,8 @@
 #include <pcl/common/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <utility>
+
 #include "core/localization/lidar_loc/lidar_loc.h"
 #include "core/localization/localization.h"
 #include "core/localization/pose_graph/pgo.h"
@@ -11,6 +13,11 @@ namespace lightning::loc {
 
 // ！ 构造函数
 Localization::Localization(Options options) { options_ = options; }
+
+void Localization::SetNode(rclcpp::Node::SharedPtr node) {
+    node_ = std::move(node);
+    local_lidar_pub_ = node_->create_publisher<sensor_msgs::msg::PointCloud2>("grid_map", 0);
+}
 
 // ！初始化函数
 bool Localization::Init(const std::string& yaml_path, const std::string& global_map_path) {
@@ -166,6 +173,12 @@ void Localization::ProcessLivoxLidarMsg(const livox_ros_driver2::msg::CustomMsg:
 void Localization::LidarOdomProcCloud(CloudPtr cloud) {
     if (lio_ == nullptr) {
         return;
+    }
+
+    if (node_) {
+        sensor_msgs::msg::PointCloud2 laser_cloud;
+        pcl::toROSMsg(*cloud, laser_cloud);
+        local_lidar_pub_->publish(laser_cloud);
     }
 
     /// NOTE: 在NCLT这种数据集中，lio内部是有缓存的，它拿到的点云不一定是最新时刻的点云
