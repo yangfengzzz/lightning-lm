@@ -163,6 +163,13 @@ void Localization::ProcessLivoxLidarMsg(const livox_ros_driver2::msg::CustomMsg:
     preprocess_->Process(cloud, laser_cloud);
     laser_cloud->header.stamp = cloud->header.stamp.sec * 1e9 + cloud->header.stamp.nanosec;
 
+    if (node_) {
+        sensor_msgs::msg::PointCloud2 ros_cloud;
+        pcl::toROSMsg(*laser_cloud, ros_cloud);
+        ros_cloud.header = laser_cloud->header;
+        local_lidar_pub_->publish(ros_cloud);
+    }
+
     if (options_.online_mode_) {
         lidar_odom_proc_cloud_.AddMessage(laser_cloud);
     } else {
@@ -173,12 +180,6 @@ void Localization::ProcessLivoxLidarMsg(const livox_ros_driver2::msg::CustomMsg:
 void Localization::LidarOdomProcCloud(CloudPtr cloud) {
     if (lio_ == nullptr) {
         return;
-    }
-
-    if (node_) {
-        sensor_msgs::msg::PointCloud2 laser_cloud;
-        pcl::toROSMsg(*cloud, laser_cloud);
-        local_lidar_pub_->publish(laser_cloud);
     }
 
     /// NOTE: 在NCLT这种数据集中，lio内部是有缓存的，它拿到的点云不一定是最新时刻的点云
