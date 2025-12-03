@@ -72,6 +72,19 @@ bool LocSystem::Init(const std::string &yaml_path) {
                 msg.pose.pose.orientation.z = pose.transform.rotation.z;
                 msg.pose.pose.orientation.w = pose.transform.rotation.w;
                 odom_pub_->publish(msg);
+
+                std::ofstream outfile("waypoints.txt");
+                if (!outfile.is_open()) {
+                    std::cerr << "无法打开文件！" << std::endl;
+                }
+                outfile << pose.transform.translation.x << "\t"
+                    << pose.transform.translation.y << "\t"
+                    << pose.transform.translation.z << "\t"
+                    << pose.transform.rotation.x << "\t"
+                    << pose.transform.rotation.y << "\t"
+                    << pose.transform.rotation.z << "\t"
+                    << pose.transform.rotation.w << "\n";
+                outfile.close();
             });
     }
 
