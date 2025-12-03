@@ -16,7 +16,7 @@ Localization::Localization(Options options) { options_ = options; }
 
 void Localization::SetNode(rclcpp::Node::SharedPtr node) {
     node_ = std::move(node);
-    local_lidar_pub_ = node_->create_publisher<sensor_msgs::msg::PointCloud2>("grid_map", 0);
+    local_lidar_pub_ = node_->create_publisher<sensor_msgs::msg::PointCloud2>("lightning_map", 0);
 }
 
 // ！初始化函数
@@ -166,7 +166,7 @@ void Localization::ProcessLivoxLidarMsg(const livox_ros_driver2::msg::CustomMsg:
     if (node_) {
         sensor_msgs::msg::PointCloud2 ros_cloud;
         pcl::toROSMsg(*laser_cloud, ros_cloud);
-        ros_cloud.header = laser_cloud->header;
+        ros_cloud.header = cloud->header;
         local_lidar_pub_->publish(ros_cloud);
     }
 

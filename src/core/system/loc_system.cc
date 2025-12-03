@@ -59,9 +59,20 @@ bool LocSystem::Init(const std::string &yaml_path) {
         });
 
     if (options_.pub_tf_) {
-        tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(node_);
+        odom_pub_ = node_->create_publisher<nav_msgs::msg::Odometry>("Odometry", 0);
         loc_->SetTFCallback(
-            [this](const geometry_msgs::msg::TransformStamped &pose) { tf_broadcaster_->sendTransform(pose); });
+            [this](const geometry_msgs::msg::TransformStamped &pose) {
+                nav_msgs::msg::Odometry msg;
+                msg.header = pose.header;
+                msg.pose.pose.position.x = pose.transform.translation.x;
+                msg.pose.pose.position.y = pose.transform.translation.y;
+                msg.pose.pose.position.z = pose.transform.translation.z;
+                msg.pose.pose.orientation.x = pose.transform.rotation.x;
+                msg.pose.pose.orientation.y = pose.transform.rotation.y;
+                msg.pose.pose.orientation.z = pose.transform.rotation.z;
+                msg.pose.pose.orientation.w = pose.transform.rotation.w;
+                odom_pub_->publish(msg);
+            });
     }
 
     bool ret = loc_->Init(yaml_path, map_path);

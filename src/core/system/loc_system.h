@@ -11,6 +11,7 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include "livox_ros_driver2/msg/custom_msg.hpp"
+#include <nav_msgs/msg/odometry.hpp>
 
 #include "common/eigen_types.h"
 #include "common/imu.h"
@@ -57,7 +58,7 @@ class LocSystem {
 
     /// 实时模式下的ros2 node, subscribers
     rclcpp::Node::SharedPtr node_;
-    std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_ = nullptr;
+    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
 
     std::string imu_topic_;
     std::string cloud_topic_;
