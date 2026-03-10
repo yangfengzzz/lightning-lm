@@ -220,7 +220,6 @@ bool LaserMapping::Run() {
             residuals_.resize(cur_pts, 0);
             point_selected_surf_.resize(cur_pts, true);
             plane_coef_.resize(cur_pts, Vec4f::Zero());
-
             auto old_state = kf_.GetX();
 
             kf_.Update(ESKF::ObsType::LIDAR, 1e-3);
@@ -251,15 +250,10 @@ bool LaserMapping::Run() {
     /// keyframes
     if (last_kf_ == nullptr) {
         MakeKF();
-    } else {
-        SE3 last_pose = last_kf_->GetLIOPose();
-        SE3 cur_pose = state_point_.GetPose();
-        if ((last_pose.translation() - cur_pose.translation()).norm() > options_.kf_dis_th_ ||
-            (last_pose.so3().inverse() * cur_pose.so3()).log().norm() > options_.kf_angle_th_) {
-            MakeKF();
-        } else if (!options_.is_in_slam_mode_ && (state_point_.timestamp_ - last_kf_->GetState().timestamp_) > 2.0) {
-            MakeKF();
-        }
+    } else if (ShouldCreateKeyframe()) {
+        MakeKF();
+    } else if (!options_.is_in_slam_mode_ && (state_point_.timestamp_ - last_kf_->GetState().timestamp_) > 2.0) {
+        MakeKF();
     }
 
     /// 更新kf_for_imu
@@ -275,6 +269,47 @@ bool LaserMapping::Run() {
 
     if (ui_) {
         ui_->UpdateScan(scan_undistort_, state_point_.GetPose());
+    }
+
+    return true;
+}
+
+bool LaserMapping::ShouldCreateKeyframe() const {
+    if (last_kf_ == nullptr) {
+        return true;
+    }
+
+    const SE3 last_pose = last_kf_->GetLIOPose();
+    const SE3 cur_pose = state_point_.GetPose();
+    const double trans = (last_pose.translation() - cur_pose.translation()).norm();
+    const double rot = (last_pose.so3().inverse() * cur_pose.so3()).log().norm();
+    const double dt = state_point_.timestamp_ - last_kf_->GetState().timestamp_;
+    const bool warmup_active =
+        kf_id_ < options_.warmup_kf_count_ || (state_point_.timestamp_ - first_lidar_time_) < options_.warmup_kf_time_sec_;
+
+    const double kf_dis_th = warmup_active ? options_.kf_dis_th_ * options_.warmup_kf_dis_scale_ : options_.kf_dis_th_;
+    const double kf_angle_th = options_.kf_angle_th_;
+    const double min_dt = warmup_active ? options_.warmup_kf_min_interval_sec_ : 0.0;
+
+    const bool exceeds_motion_threshold = trans > kf_dis_th || rot > kf_angle_th;
+
+    if (!exceeds_motion_threshold) {
+        return false;
+    }
+
+    if (dt < min_dt) {
+        return false;
+    }
+
+    const double rot_deg = rot * 180.0 / M_PI;
+    if (warmup_active && trans > options_.warmup_shape_reject_trans_m_ && rot_deg < options_.warmup_shape_reject_rot_deg_) {
+        return false;
+    }
+
+    const bool early_rot_phase = !warmup_active && (state_point_.timestamp_ - first_lidar_time_) < options_.early_rot_kf_time_sec_;
+    const bool rotation_dominated = rot_deg > options_.early_rot_kf_min_rot_deg_ && trans < options_.early_rot_kf_max_trans_m_;
+    if (early_rot_phase && rotation_dominated && dt < options_.early_rot_kf_min_interval_sec_) {
+        return false;
     }
 
     return true;
@@ -559,7 +594,6 @@ void LaserMapping::ObsModel(NavState &s, ESKF::CustomObservationModel &obs) {
             corr_norm_[effect_feat_num_] = plane_coef_[i];
             corr_pts_[effect_feat_num_] = scan_down_body_->points[i].getVector4fMap();
             corr_pts_[effect_feat_num_][3] = residuals_[i];
-
             effect_feat_num_++;
         }
     }

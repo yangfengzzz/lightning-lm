@@ -38,6 +38,16 @@ class LaserMapping {
         /// 关键帧阈值
         double kf_dis_th_ = 2.0;
         double kf_angle_th_ = 15 * M_PI / 180.0;
+        double warmup_kf_min_interval_sec_ = 1.0;
+        double warmup_kf_time_sec_ = 3.0;
+        double warmup_kf_dis_scale_ = 1.4;
+        int warmup_kf_count_ = 4;
+        double warmup_shape_reject_trans_m_ = 3.0;
+        double warmup_shape_reject_rot_deg_ = 2.0;
+        double early_rot_kf_time_sec_ = 8.0;
+        double early_rot_kf_min_interval_sec_ = 0.8;
+        double early_rot_kf_min_rot_deg_ = 10.0;
+        double early_rot_kf_max_trans_m_ = 2.5;
     };
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -128,7 +138,7 @@ class LaserMapping {
 
     /// 创建关键帧
     void MakeKF();
-
+    bool ShouldCreateKeyframe() const;
    private:
     Options options_;
 
