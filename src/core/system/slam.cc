@@ -112,6 +112,7 @@ bool SlamSystem::Init(const std::string& yaml_path) {
             livox_topic_, qos, [this](livox_ros_driver2::msg::CustomMsg ::SharedPtr cloud) {
                 Timer::Evaluate([&]() { ProcessLidar(cloud); }, "Proc Lidar", true);
             });
+        odom_pub_ = node_->create_publisher<nav_msgs::msg::Odometry>("/Odometry", qos);
 
         savemap_service_ = node_->create_service<SaveMapService>(
             "lightning/save_map", [this](const SaveMapService::Request::SharedPtr& req,
@@ -244,7 +245,31 @@ void SlamSystem::ProcessLidar(const sensor_msgs::msg::PointCloud2::SharedPtr& cl
     }
 
     lio_->ProcessPointCloud2(cloud);
-    lio_->Run();
+    if (!lio_->Run()) {
+        return;
+    }
+
+    if (odom_pub_ != nullptr) {
+        const auto state = lio_->GetState();
+        const auto pose = state.GetPose();
+        const auto quat = pose.unit_quaternion();
+
+        nav_msgs::msg::Odometry odom;
+        odom.header = cloud->header;
+        odom.header.frame_id = "odom";
+        odom.child_frame_id = "base_link";
+        odom.pose.pose.position.x = pose.translation().x();
+        odom.pose.pose.position.y = pose.translation().y();
+        odom.pose.pose.position.z = pose.translation().z();
+        odom.pose.pose.orientation.x = quat.x();
+        odom.pose.pose.orientation.y = quat.y();
+        odom.pose.pose.orientation.z = quat.z();
+        odom.pose.pose.orientation.w = quat.w();
+        odom.twist.twist.linear.x = state.vel_.x();
+        odom.twist.twist.linear.y = state.vel_.y();
+        odom.twist.twist.linear.z = state.vel_.z();
+        odom_pub_->publish(odom);
+    }
 
     auto kf = lio_->GetKeyframe();
     if (kf != cur_kf_) {
@@ -276,7 +301,31 @@ void SlamSystem::ProcessLidar(const livox_ros_driver2::msg::CustomMsg::SharedPtr
     }
 
     lio_->ProcessPointCloud2(cloud);
-    lio_->Run();
+    if (!lio_->Run()) {
+        return;
+    }
+
+    if (odom_pub_ != nullptr) {
+        const auto state = lio_->GetState();
+        const auto pose = state.GetPose();
+        const auto quat = pose.unit_quaternion();
+
+        nav_msgs::msg::Odometry odom;
+        odom.header.stamp = cloud->header.stamp;
+        odom.header.frame_id = "odom";
+        odom.child_frame_id = "base_link";
+        odom.pose.pose.position.x = pose.translation().x();
+        odom.pose.pose.position.y = pose.translation().y();
+        odom.pose.pose.position.z = pose.translation().z();
+        odom.pose.pose.orientation.x = quat.x();
+        odom.pose.pose.orientation.y = quat.y();
+        odom.pose.pose.orientation.z = quat.z();
+        odom.pose.pose.orientation.w = quat.w();
+        odom.twist.twist.linear.x = state.vel_.x();
+        odom.twist.twist.linear.y = state.vel_.y();
+        odom.twist.twist.linear.z = state.vel_.z();
+        odom_pub_->publish(odom);
+    }
 
     auto kf = lio_->GetKeyframe();
     if (kf != cur_kf_) {
