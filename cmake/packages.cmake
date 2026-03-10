@@ -2,6 +2,15 @@ find_package(glog REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
 find_package(yaml-cpp REQUIRED)
+if (NOT Pangolin_DIR)
+    set(_bundled_pangolin_install_dir "${PROJECT_SOURCE_DIR}/thirdparty/Pangolin-0.9.3/install/lib/cmake/Pangolin")
+    set(_bundled_pangolin_build_dir "${PROJECT_SOURCE_DIR}/thirdparty/Pangolin-0.9.3/build")
+    if (EXISTS "${_bundled_pangolin_install_dir}/PangolinConfig.cmake")
+        set(Pangolin_DIR "${_bundled_pangolin_install_dir}" CACHE PATH "Bundled Pangolin config" FORCE)
+    elseif (EXISTS "${_bundled_pangolin_build_dir}/PangolinConfig.cmake")
+        set(Pangolin_DIR "${_bundled_pangolin_build_dir}" CACHE PATH "Bundled Pangolin build config" FORCE)
+    endif ()
+endif ()
 find_package(Pangolin REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(pcl_conversions REQUIRED)
@@ -28,8 +37,10 @@ endif ()
 if (BUILD_WITH_MARCH_NATIVE)
     add_compile_options(-march=native)
 else ()
-    add_definitions(-msse -msse2 -msse3 -msse4 -msse4.1 -msse4.2)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse -msse2 -msse3 -msse4 -msse4.1 -msse4.2")
+    if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|i.86)$")
+        add_definitions(-msse -msse2 -msse3 -msse4 -msse4.1 -msse4.2)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse -msse2 -msse3 -msse4 -msse4.1 -msse4.2")
+    endif ()
 endif ()
 
 include_directories(
@@ -68,4 +79,3 @@ set(third_party_libs
         tbb
         ${rosbag2_cpp_LIBRARIES}
 )
-

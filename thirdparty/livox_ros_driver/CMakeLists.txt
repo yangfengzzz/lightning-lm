@@ -20,6 +20,11 @@ if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic -Wno-unused-parameter)
 endif ()
 
+# Jazzy toolchains can reject an empty project version during ROS interface generation.
+if (NOT DEFINED LIVOX_ROS_DRIVER2_VERSION OR "${LIVOX_ROS_DRIVER2_VERSION}" STREQUAL "")
+  set(LIVOX_ROS_DRIVER2_VERSION "1.0.0")
+endif ()
+
 # Printf version info
 # include(cmake/version.cmake)
 project(${PROJECT_NAME} VERSION ${LIVOX_ROS_DRIVER2_VERSION} LANGUAGES CXX)
