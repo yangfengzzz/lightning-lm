@@ -7,6 +7,13 @@ add_library(${PROJECT_NAME}.libs SHARED
         io/yaml_io.cc
         io/file_io.cc
 
+        core/backend/common/backend_config.cc
+        core/backend/common/backend_diagnostics.cc
+        core/backend/loop_proposal/spatial_radius_loop_proposal.cc
+        core/backend/loop_registration/multi_resolution_ndt_registration.cc
+        core/backend/loop_filter/loop_filter_strategy.cc
+        core/backend/pose_graph/loop_pose_graph.cc
+
         core/lio/eskf.cc
         core/lio/laser_mapping.cc
         core/lio/pointcloud_preprocess.cc

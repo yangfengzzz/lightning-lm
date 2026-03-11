@@ -1,4 +1,5 @@
 #include "pgo_impl.h"
+#include "core/backend/common/backend_diagnostics.h"
 #include "core/opti_algo/algo_select.h"
 #include "core/robust_kernel/robust_kernel_all.h"
 
@@ -39,6 +40,24 @@ std::string print_info(const std::vector<T>& edges, double th = 0) {
         return str;
     }
     return std::string("");
+}
+
+std::string BuildPgoDiagnosticsJson(const lightning::loc::PGOImpl& impl, int optimizer_iterations) {
+    std::ostringstream oss;
+    oss << "{\n"
+        << "  \"window_size\": " << impl.frames_.size() << ",\n"
+        << "  \"optimizer_iterations\": " << optimizer_iterations << ",\n"
+        << "  \"lidar_loc_factors\": " << impl.lidar_loc_edges_.size() << ",\n"
+        << "  \"lidar_odom_factors\": " << impl.lidar_odom_edges_.size() << ",\n"
+        << "  \"dr_factors\": " << impl.dr_edges_.size() << ",\n"
+        << "  \"prior_factors\": " << impl.prior_edges_.size() << ",\n"
+        << "  \"factor_density\": "
+        << (impl.frames_.empty() ? 0.0
+                                 : static_cast<double>(impl.lidar_loc_edges_.size() + impl.lidar_odom_edges_.size() +
+                                                       impl.dr_edges_.size() + impl.prior_edges_.size()) /
+                                       static_cast<double>(impl.frames_.size()))
+        << "\n}\n";
+    return oss.str();
 }
 
 }  // namespace
@@ -242,7 +261,7 @@ void PGOImpl::RunOptimization() {
     // solve problems
     optimizer_->InitializeOptimization();
     optimizer_->SetVerbose(options_.verbose_);
-    optimizer_->Optimize(5);
+    const int iterations = optimizer_->Optimize(5);
 
     // 确定inlier和outliers
     // RemoveOutliers();
@@ -262,6 +281,8 @@ void PGOImpl::RunOptimization() {
         frame->last_opti_pose_ = frame->opti_pose_;
         frame->opti_pose_ = SE3(v->Estimate().matrix());
     }
+
+    backend::WriteLocalizationPgoDiagnostics(BuildPgoDiagnosticsJson(*this, iterations));
 }
 
 void PGOImpl::BuildProblem() {

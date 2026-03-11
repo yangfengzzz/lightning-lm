@@ -7,10 +7,13 @@
 
 #include "common/keyframe.h"
 #include "common/loop_candidate.h"
+#include "core/backend/common/backend_config.h"
+#include "core/backend/common/backend_diagnostics.h"
+#include "core/backend/loop_filter/loop_filter_strategy.h"
+#include "core/backend/loop_proposal/spatial_radius_loop_proposal.h"
+#include "core/backend/loop_registration/multi_resolution_ndt_registration.h"
+#include "core/backend/pose_graph/loop_pose_graph.h"
 #include "utils/async_message_process.h"
-
-#include "core/graph/optimizer.h"
-#include "core/types/edge_se3.h"
 
 namespace lightning {
 
@@ -24,24 +27,6 @@ class LoopClosing {
 
         bool verbose_ = true;       // 输出调试信息
         bool online_mode_ = false;  // 切换离线-在线模式
-
-        int loop_kf_gap_ = 20;       // 每隔多少个关键帧检查一次
-        int min_id_interval_ = 20;   // 被检查的关键帧ID间隔
-        int closest_id_th_ = 50;     // 历史关键帧与当前帧的ID间隔
-        double max_range_ = 30.0;    // 候选帧的最大距离
-        double ndt_score_th_ = 1.0;  // ndt位姿分值
-
-        /// 图优化权重
-        double motion_trans_noise_ = 0.1;               // 位移权重
-        double motion_rot_noise_ = 3.0 * M_PI / 180.0;  // 旋转权重
-
-        double loop_trans_noise_ = 0.2;               // 位移权重
-        double loop_rot_noise_ = 3.0 * M_PI / 180.0;  // 旋转权重
-
-        double rk_loop_th_ = 5.2 / 5;  // 回环的RK阈值
-
-        bool with_height_ = true;
-        double height_noise_ = 0.1;
     };
 
     LoopClosing(Options options = Options()) { options_ = options; }
@@ -58,16 +43,9 @@ class LoopClosing {
 
    protected:
     void HandleKF(Keyframe::Ptr kf);
-
     void DetectLoopCandidates();
-
-    /// 计算回环候选位姿
     void ComputeLoopCandidates();
-
-    /// 计算单个回环候选
     void ComputeForCandidate(LoopCandidate& c);
-
-    /// 优化位姿
     void PoseOptimization();
 
     Options options_;
@@ -80,13 +58,12 @@ class LoopClosing {
 
     AsyncMessageProcess<Keyframe::Ptr> kf_thread_;
 
-    std::shared_ptr<miao::Optimizer> optimizer_ = nullptr;
-
-    Mat6d info_motion_ = Mat6d::Identity();  // 关键帧间的运动信息阵
-    Mat6d info_loops_ = Mat6d::Identity();   // 回环帧的信息矩阵
-
-    std::vector<std::shared_ptr<miao::VertexSE3>> kf_vert_;
-    std::vector<std::shared_ptr<miao::EdgeSE3>> edge_loops_;
+    backend::LoopClosingBackendConfig backend_config_;
+    backend::LoopClosingDiagnostics diagnostics_;
+    std::unique_ptr<backend::SpatialRadiusLoopProposal> proposal_;
+    std::unique_ptr<backend::MultiResolutionNDTLoopRegistration> registration_;
+    std::unique_ptr<backend::LoopFilterStrategy> filter_;
+    std::unique_ptr<backend::LoopPoseGraph> pose_graph_;
 
     LoopClosedCallback loop_cb_;
 };
